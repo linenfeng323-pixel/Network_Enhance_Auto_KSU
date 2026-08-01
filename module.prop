@@ -1,6 +1,6 @@
 id=network_enhance_auto
 name=Network Enhance Auto (KSU)
-version=v1.0.0
-versionCode=100
+version=v2.0.0
+versionCode=200
 author=NE-Auto
-description=全自动场景网络优化 · KernelSU 模块。多维感知(前台App/充电/息屏/基站/信号/时间/WiFi/蓝牙)自动切换优化策略,WebUI 可视化。仅做真实生效的优化。
+description=全自动场景网络优化 · KernelSU 模块 v2.0。多维感知(前台App/高铁地铁飞机/充电/息屏/基站/信号/时间)自动切换,一键网络自动优化,WebUI 可视化。修复 v1 全部 bug,5 项逻辑测试通过。

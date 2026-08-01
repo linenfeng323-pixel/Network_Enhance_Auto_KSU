@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Network Enhance Auto</title>
 <link rel="stylesheet" href="style.css">
+<!-- KSU WebUI: 通过这个 script 注入 ksu 全局对象 -->
+<script src="/ksu_cli"></script>
 </head>
 <body>
 <div class="wrap">
@@ -14,6 +16,9 @@
     <div class="hero-mode" id="mode">--</div>
     <div class="hero-motion"><span class="dot" id="runDot"></span><span id="motion">检测中</span></div>
   </div>
+
+  <!-- 一键优化按钮 -->
+  <button class="btn primary big" onclick="autoOptimize()" id="autoBtn">⚡ 一键网络自动优化</button>
 
   <!-- 指标网格 -->
   <div class="grid">
@@ -62,8 +67,8 @@
     <div class="kv"><span>蓝牙连接</span><span id="bt">--</span></div>
     <div class="kv"><span>运营商</span><span id="carrier">--</span></div>
     <div class="kv"><span>小区 CID</span><span id="cellid">--</span></div>
-    <div class="kv"><span>WiFi 连接</span><span id="wificonn">--</span></div>
-    <div class="kv"><span>目标场景</span><span id="target">--</span></div>
+    <div class="kv"><span>活动网络</span><span id="actnet">--</span></div>
+    <div class="kv"><span>推荐场景</span><span id="target">--</span></div>
   </div>
 
   <!-- 操作 -->
@@ -79,65 +84,75 @@
     <div class="log" id="log">加载中...</div>
   </div>
 
-  <div class="footer">Network Enhance Auto · KSU · v1.0.0</div>
+  <div class="footer">Network Enhance Auto · KSU · v2.0</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// KSU WebUI 桥接: 通过 ksuexec 调用 shell
+// 模块脚本路径
+var SCRIPT="/data/adb/modules/network_enhance_auto/scripts/auto_engine.sh";
+
+// KSU WebUI 执行 shell
 function sh(cmd){
-  // KSU WebUI 注入的接口
+  // KSU 注入的 ksu 对象
   if(typeof ksu!=="undefined" && ksu.exec){
     return ksu.exec("sh","-c",cmd);
   }
-  // 调试/浏览器环境降级
-  return Promise.resolve("[浏览器模式] "+cmd);
+  // APatch / MMRL 兼容
+  if(typeof execShell!=="undefined"){
+    return execShell(cmd);
+  }
+  // 浏览器调试降级
+  return new Promise(function(resolve){
+    console.log("[debug] "+cmd);
+    resolve({stdout:""});
+  });
 }
 
 async function execSh(cmd){
   try{
-    const r=await sh(cmd);
-    if(typeof r==="string")return r.trim();
-    if(r&&typeof r.stdout==="string")return r.stdout.trim();
-    return String(r||"").trim();
-  }catch(e){return ""}
+    var r=await sh(cmd);
+    if(r&&typeof r==="object"&&r.stdout!==undefined) return String(r.stdout).trim();
+    if(typeof r==="string") return r.trim();
+    return "";
+  }catch(e){ console.error(e); return ""; }
 }
 
 function toast(msg){
-  const t=document.getElementById("toast");
-  t.textContent=msg;t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),1800);
+  var t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");},2000);
 }
 
 async function refresh(showToast){
-  const out=await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh json 2>/dev/null || sh /data/local/tmp/ne_auto_json.sh");
-  let d={};
+  var out=await execSh("sh "+SCRIPT+" json 2>/dev/null");
+  var d={};
   try{ d=JSON.parse(out); }catch(e){
-    // 尝试从纯文本解析
-    if(showToast)toast("引擎未启动,显示空状态");
+    if(showToast) toast("引擎未启动,显示空状态");
   }
   document.getElementById("mode").textContent=d.mode||"未启动";
   document.getElementById("motion").textContent=motionName(d.motion||"");
-  document.getElementById("runDot").className=d.mode?"dot":"dot off";
+  document.getElementById("runDot").className=d.running?"dot":"dot off";
+  document.getElementById("toggleBtn").textContent=d.running?"停止引擎":"启动引擎";
   setVal("rssi",d.wifi_rssi); setBar("rssiBar",rssiPct(d.wifi_rssi));
   setVal("rsrp",d.cell_rsrp); setBar("rsrpBar",rsrpPct(d.cell_rsrp));
   setVal("ping",d.ping_ms); setBar("pingBar",pingPct(d.ping_ms));
   setVal("loss",d.packet_loss); setBar("lossBar",lossPct(d.packet_loss));
-  document.getElementById("topapp").textContent=d.topapp||"--";
-  document.getElementById("screen").textContent=d.screen_on==="1"?"亮屏":"息屏";
-  document.getElementById("battery").textContent=(d.battery||"--")+"%";
-  document.getElementById("bt").textContent=d.bt_connected==="1"?"已连接":"未连接";
-  document.getElementById("carrier").textContent=d.carrier||"--";
-  document.getElementById("cellid").textContent=d.cellid||"--";
-  document.getElementById("wificonn").textContent=d.wifi_connected==="1"?"已连接":"未连接";
-  document.getElementById("target").textContent=d.target||"--";
+  setVal("topapp",d.topapp);
+  setVal("screen",d.screen_on==="1"?"亮屏":(d.screen_on==="0"?"息屏":"--"));
+  setVal("battery",(d.battery||"--")+"%");
+  setVal("bt",d.bt_connected==="1"?"已连接":"未连接");
+  setVal("carrier",d.carrier);
+  setVal("cellid",d.cellid);
+  setVal("actnet",netName(d.active_network));
+  setVal("target",d.target);
   document.getElementById("charging").textContent=d.charging==="1"?"⚡ 充电中":"";
-  // 高亮当前模式按钮
-  document.querySelectorAll(".mode-btn").forEach(b=>{
+  document.querySelectorAll(".mode-btn").forEach(function(b){
     b.classList.toggle("active",b.dataset.m===d.mode);
   });
-  if(showToast)toast("已刷新");
+  if(showToast) toast("已刷新");
 }
 
 function setVal(id,v){ document.getElementById(id).textContent=(v&&v!=="")?v:"--"; }
@@ -149,13 +164,28 @@ function lossPct(v){ if(!v||v==="?")return 0; return parseInt(v); }
 function motionName(m){
   return {highspeed:"🚄 高速移动",subway:"🚇 地铁中",flight:"✈️ 飞行模式",static:"📍 静止"}[m]||m;
 }
+function netName(n){
+  return {wifi:"WiFi",cell:"蜂窝",none:"无网络"}[n]||n||"--";
+}
 
-// 手动切换
-document.querySelectorAll(".mode-btn").forEach(b=>{
-  b.onclick=async()=>{
-    const m=b.dataset.m;
+// 一键网络自动优化
+async function autoOptimize(){
+  var btn=document.getElementById("autoBtn");
+  btn.disabled=true; btn.textContent="⏳ 正在优化...";
+  toast("正在采集网络状态并优化...");
+  var out=await execSh("sh "+SCRIPT+" autoopt 2>&1");
+  btn.disabled=false; btn.textContent="⚡ 一键网络自动优化";
+  toast("优化完成");
+  document.getElementById("log").textContent=out||"(无输出)";
+  setTimeout(refresh,800);
+}
+
+// 手动切换场景
+document.querySelectorAll(".mode-btn").forEach(function(b){
+  b.onclick=async function(){
+    var m=b.dataset.m;
     toast("切换到 "+m+"...");
-    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh apply "+m);
+    await execSh("sh "+SCRIPT+" apply "+m);
     toast("已切换: "+m);
     setTimeout(refresh,800);
   };
@@ -163,35 +193,35 @@ document.querySelectorAll(".mode-btn").forEach(b=>{
 
 // 启停引擎
 async function toggleEngine(){
-  const running=document.getElementById("runDot").className.indexOf("off")<0;
+  var running=document.getElementById("runDot").className.indexOf("off")<0;
   if(running){
-    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh stop");
+    await execSh("sh "+SCRIPT+" stop");
     toast("引擎已停止");
   }else{
-    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh start");
+    await execSh("sh "+SCRIPT+" start");
     toast("引擎已启动");
   }
-  setTimeout(refresh,1000);
+  setTimeout(refresh,1200);
 }
 
 // 测速
 async function runSpeedtest(){
   toast("测速中,请稍候...");
-  const out=await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh speedtest");
+  var out=await execSh("sh "+SCRIPT+" speedtest 2>&1");
   toast("测速完成");
   document.getElementById("log").textContent=out||"(无输出)";
 }
 
 // 加载日志
 async function loadLog(){
-  const out=await execSh("tail -30 /data/local/tmp/ne_auto/events.log 2>/dev/null");
+  var out=await execSh("tail -30 /data/local/tmp/ne_auto/events.log 2>/dev/null");
   document.getElementById("log").textContent=out||"(暂无事件)";
 }
 
 // 初始化
 refresh();
 loadLog();
-setInterval(refresh,5000);  // 5 秒自动刷新
+setInterval(refresh,5000);
 setInterval(loadLog,15000);
 </script>
 </body>
