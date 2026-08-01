@@ -4,9 +4,9 @@
 # 多维感知: App/运动(高铁地铁飞机)/充电/息屏/基站/时间/信号
 # ======================================================================
 MODDIR="${MODDIR:-$(dirname "$(dirname "$0" 2>/dev/null)" 2>/dev/null)}"
-SCENES_DIR="${MODDIR}/scripts/scenes"
-[ -d "$SCENES_DIR" ] || SCENES_DIR="$(dirname "$0" 2>/dev/null)/scenes"
-. "$SCENES_DIR/common.sh"
+NE_SCRIPTS="${MODDIR}/scripts"
+[ -d "$NE_SCRIPTS" ] || NE_SCRIPTS="$(dirname "$0" 2>/dev/null)"
+. "$NE_SCRIPTS/auto_common.sh"
 
 # 加载配置
 ne_load_conf() {
@@ -162,7 +162,7 @@ ne_heal() {
 ne_apply() {
     local mode="$1"
     ne_log "应用场景: $mode (运动: $(ne_detect_motion))"
-    sh "$SCENES_DIR/apply.sh" "$mode" 2>/dev/null
+    sh "$NE_SCRIPTS/auto_apply.sh" "$mode" 2>/dev/null
     ne_notify "网络增强" "已切换: $mode"
 }
 
@@ -256,9 +256,14 @@ case "${1:-}" in
         sed -i "s|$placeholder|$cid|" "$NE_AUTO_RULES" 2>/dev/null && echo "已记录 $2: $cid" || echo "未找到占位符"
         ;;
     json) ne_status_json ;;
+    _motion)
+        ne_load_conf
+        ne_collect_state
+        ne_detect_motion
+        ;;
     apply)
         [ -z "$2" ] && { echo "用法: apply <mode>"; exit 1; }
-        sh "$SCENES_DIR/apply.sh" "$2"
+        sh "$NE_SCRIPTS/auto_apply.sh" "$2"
         echo "已应用: $2"
         ;;
     speedtest)

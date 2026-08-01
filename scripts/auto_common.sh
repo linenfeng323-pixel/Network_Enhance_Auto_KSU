@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# common.sh — Network Enhance Auto 公共函数库 (KSU root 版)
+# auto_common.sh — Network Enhance Auto 公共函数库 (KSU root 版)
 # ----------------------------------------------------------------------
 NE_AUTO_DIR="/data/local/tmp/ne_auto"
 NE_AUTO_STATE="$NE_AUTO_DIR/state"
@@ -162,7 +162,7 @@ ne_airplane_on() {
 # ---------------- 综合采集 ----------------
 ne_collect_state() {
     local topapp cellid rssi rsrp sinr ping_out ping_rtt ping_loss gw_ok wifi_conn
-    local charging bat screen_on bt conn speed carrier airpl
+    local charging bat screen_on bt speed carrier airpl
     topapp=$(ne_get_topapp)
     cellid=$(ne_get_cellid)
     rssi=$(ne_get_wifi_rssi)
@@ -223,7 +223,7 @@ ne_state_get() {
 # ---------------- 高速移动识别 ----------------
 # 返回: highspeed / subway / flight / static
 ne_detect_motion() {
-    local speed cid_changes carrier airpl
+    local speed cid_changes airpl
     airpl=$(ne_state_get airplane)
 
     # 飞行模式开启中 → flight

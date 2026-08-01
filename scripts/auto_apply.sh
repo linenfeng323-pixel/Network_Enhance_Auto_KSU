@@ -1,6 +1,6 @@
 #!/system/bin/sh
-# apply.sh — 各场景优化策略应用 (root 版, 仅做真实生效的优化)
-# 用法: sh apply.sh <mode>
+# auto_apply.sh — 各场景优化策略应用 (root 版, 仅做真实生效的优化)
+# 用法: sh auto_apply.sh <mode>
 
 MODE="${1:-normal}"
 
