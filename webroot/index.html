@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Network Enhance Auto</title>
+<style>
+:root{
+  --bg:#0a0e1a; --bg2:#111827; --card:#151c2c; --border:#1f2937;
+  --text:#e5e7eb; --dim:#9ca3af; --mut:#6b7280;
+  --accent:#00d4ff; --accent2:#0099ff;
+  --green:#10b981; --yellow:#f59e0b; --red:#ef4444; --purple:#a855f7;
+  --grad:linear-gradient(135deg,#00d4ff 0%,#0099ff 50%,#a855f7 100%);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:
+    radial-gradient(circle at 20% 0%,rgba(0,212,255,.08),transparent 50%),
+    radial-gradient(circle at 80% 100%,rgba(168,85,247,.08),transparent 50%);
+}
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 32px}
+/* 顶部状态卡 */
+.hero{
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:24px 20px;position:relative;overflow:hidden;margin-bottom:16px;
+}
+.hero::before{
+  content:"";position:absolute;top:-50%;right:-30%;width:200px;height:200px;
+  background:var(--grad);filter:blur(80px);opacity:.15;border-radius:50%;
+}
+.hero-label{font-size:12px;color:var(--mut);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.hero-mode{font-size:34px;font-weight:700;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-.5px}
+.hero-motion{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;color:var(--dim);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);padding:4px 10px;border-radius:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+.dot.off{background:var(--red);box-shadow:0 0 8px var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* 网格指标 */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.cell{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;position:relative}
+.cell-k{font-size:11px;color:var(--mut);letter-spacing:1px;margin-bottom:6px}
+.cell-v{font-size:22px;font-weight:600;color:var(--text)}
+.cell-u{font-size:11px;color:var(--dim);margin-left:3px}
+.bar{height:4px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--grad);border-radius:2px;transition:width .6s}
+/* 场景按钮 */
+.sec-title{font-size:13px;color:var(--dim);margin:8px 4px 10px;letter-spacing:1px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.mode-btn{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px 8px;color:var(--text);cursor:pointer;transition:all .2s;
+  display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;
+}
+.mode-btn:active{transform:scale(.95)}
+.mode-btn.active{border-color:var(--accent);background:rgba(0,212,255,.08);box-shadow:0 0 0 1px var(--accent) inset}
+.mode-btn .ic{font-size:22px}
+/* 详情卡 */
+.detail{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.detail h3{font-size:13px;color:var(--dim);margin-bottom:12px;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--dim)}
+.kv span:last-child{color:var(--text);font-weight:500;font-family:ui-monospace,monospace}
+/* 操作按钮 */
+.actions{display:flex;gap:10px;margin-bottom:16px}
+.btn{
+  flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px;color:var(--text);cursor:pointer;font-size:13px;transition:all .2s;
+}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--grad);border:0;color:#fff;font-weight:600}
+/* 日志 */
+.log{
+  background:#000;border:1px solid var(--border);border-radius:14px;padding:12px;
+  font-family:ui-monospace,monospace;font-size:11px;color:var(--green);
+  max-height:200px;overflow-y:auto;line-height:1.6;white-space:pre-wrap;word-break:break-all;
+}
+.log::-webkit-scrollbar{width:4px}
+.log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+  background:var(--card);border:1px solid var(--accent);border-radius:12px;
+  padding:10px 18px;color:var(--text);font-size:13px;transition:transform .3s;z-index:99;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.footer{text-align:center;color:var(--mut);font-size:11px;margin-top:20px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-label">当前场景</div>
+    <div class="hero-mode" id="mode">--</div>
+    <div class="hero-motion"><span class="dot" id="runDot"></span><span id="motion">检测中</span></div>
+  </div>
+
+  <!-- 指标网格 -->
+  <div class="grid">
+    <div class="cell">
+      <div class="cell-k">WiFi 信号</div>
+      <div class="cell-v"><span id="rssi">--</span><span class="cell-u">dBm</span></div>
+      <div class="bar"><i id="rssiBar" style="width:0"></i></div>
+    </div>
+    <div class="cell">
+      <div class="cell-k">蜂窝 RSRP</div>
+      <div class="cell-v"><span id="rsrp">--</span><span class="cell-u">dBm</span></div>
+      <div class="bar"><i id="rsrpBar" style="width:0"></i></div>
+    </div>
+    <div class="cell">
+      <div class="cell-k">延迟</div>
+      <div class="cell-v"><span id="ping">--</span><span class="cell-u">ms</span></div>
+      <div class="bar"><i id="pingBar" style="width:0"></i></div>
+    </div>
+    <div class="cell">
+      <div class="cell-k">丢包率</div>
+      <div class="cell-v"><span id="loss">--</span><span class="cell-u">%</span></div>
+      <div class="bar"><i id="lossBar" style="width:0"></i></div>
+    </div>
+  </div>
+
+  <!-- 场景按钮 -->
+  <div class="sec-title">手动切换场景</div>
+  <div class="modes" id="modes">
+    <div class="mode-btn" data-m="highspeed"><span class="ic">🚄</span>高铁</div>
+    <div class="mode-btn" data-m="subway"><span class="ic">🚇</span>地铁</div>
+    <div class="mode-btn" data-m="flight"><span class="ic">✈️</span>飞机</div>
+    <div class="mode-btn" data-m="game"><span class="ic">🎮</span>游戏</div>
+    <div class="mode-btn" data-m="video"><span class="ic">📺</span>视频</div>
+    <div class="mode-btn" data-m="voip"><span class="ic">📞</span>通话</div>
+    <div class="mode-btn" data-m="weaknet"><span class="ic">📡</span>弱网</div>
+    <div class="mode-btn" data-m="powersave"><span class="ic">🔋</span>省电</div>
+    <div class="mode-btn" data-m="normal"><span class="ic">✨</span>默认</div>
+  </div>
+
+  <!-- 详情 -->
+  <div class="detail">
+    <h3><span>实时状态</span><span id="charging" style="color:var(--green);font-size:11px"></span></h3>
+    <div class="kv"><span>前台 App</span><span id="topapp">--</span></div>
+    <div class="kv"><span>息屏状态</span><span id="screen">--</span></div>
+    <div class="kv"><span>电池电量</span><span id="battery">--</span></div>
+    <div class="kv"><span>蓝牙连接</span><span id="bt">--</span></div>
+    <div class="kv"><span>运营商</span><span id="carrier">--</span></div>
+    <div class="kv"><span>小区 CID</span><span id="cellid">--</span></div>
+    <div class="kv"><span>WiFi 连接</span><span id="wificonn">--</span></div>
+    <div class="kv"><span>目标场景</span><span id="target">--</span></div>
+  </div>
+
+  <!-- 操作 -->
+  <div class="actions">
+    <button class="btn primary" onclick="toggleEngine()" id="toggleBtn">停止引擎</button>
+    <button class="btn" onclick="runSpeedtest()">测速</button>
+    <button class="btn" onclick="refresh(true)">刷新</button>
+  </div>
+
+  <!-- 日志 -->
+  <div class="detail">
+    <h3>事件日志</h3>
+    <div class="log" id="log">加载中...</div>
+  </div>
+
+  <div class="footer">Network Enhance Auto · KSU · v1.0.0</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// KSU WebUI 桥接: 通过 ksuexec 调用 shell
+function sh(cmd){
+  // KSU WebUI 注入的接口
+  if(typeof ksu!=="undefined" && ksu.exec){
+    return ksu.exec("sh","-c",cmd);
+  }
+  // 调试/浏览器环境降级
+  return Promise.resolve("[浏览器模式] "+cmd);
+}
+
+async function execSh(cmd){
+  try{
+    const r=await sh(cmd);
+    if(typeof r==="string")return r.trim();
+    if(r&&typeof r.stdout==="string")return r.stdout.trim();
+    return String(r||"").trim();
+  }catch(e){return ""}
+}
+
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg;t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1800);
+}
+
+async function refresh(showToast){
+  const out=await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh json 2>/dev/null || sh /data/local/tmp/ne_auto_json.sh");
+  let d={};
+  try{ d=JSON.parse(out); }catch(e){
+    // 尝试从纯文本解析
+    if(showToast)toast("引擎未启动,显示空状态");
+  }
+  document.getElementById("mode").textContent=d.mode||"未启动";
+  document.getElementById("motion").textContent=motionName(d.motion||"");
+  document.getElementById("runDot").className=d.mode?"dot":"dot off";
+  setVal("rssi",d.wifi_rssi); setBar("rssiBar",rssiPct(d.wifi_rssi));
+  setVal("rsrp",d.cell_rsrp); setBar("rsrpBar",rsrpPct(d.cell_rsrp));
+  setVal("ping",d.ping_ms); setBar("pingBar",pingPct(d.ping_ms));
+  setVal("loss",d.packet_loss); setBar("lossBar",lossPct(d.packet_loss));
+  document.getElementById("topapp").textContent=d.topapp||"--";
+  document.getElementById("screen").textContent=d.screen_on==="1"?"亮屏":"息屏";
+  document.getElementById("battery").textContent=(d.battery||"--")+"%";
+  document.getElementById("bt").textContent=d.bt_connected==="1"?"已连接":"未连接";
+  document.getElementById("carrier").textContent=d.carrier||"--";
+  document.getElementById("cellid").textContent=d.cellid||"--";
+  document.getElementById("wificonn").textContent=d.wifi_connected==="1"?"已连接":"未连接";
+  document.getElementById("target").textContent=d.target||"--";
+  document.getElementById("charging").textContent=d.charging==="1"?"⚡ 充电中":"";
+  // 高亮当前模式按钮
+  document.querySelectorAll(".mode-btn").forEach(b=>{
+    b.classList.toggle("active",b.dataset.m===d.mode);
+  });
+  if(showToast)toast("已刷新");
+}
+
+function setVal(id,v){ document.getElementById(id).textContent=(v&&v!=="")?v:"--"; }
+function setBar(id,p){ document.getElementById(id).style.width=Math.max(0,Math.min(100,p))+"%"; }
+function rssiPct(v){ if(!v||v==="?")return 0; return Math.max(0,(parseInt(v)+100)*2); }
+function rsrpPct(v){ if(!v||v==="?")return 0; return Math.max(0,(parseInt(v)+140)*1.4); }
+function pingPct(v){ if(!v||v==="?")return 0; return Math.max(0,100-parseInt(v)/2); }
+function lossPct(v){ if(!v||v==="?")return 0; return parseInt(v); }
+function motionName(m){
+  return {highspeed:"🚄 高速移动",subway:"🚇 地铁中",flight:"✈️ 飞行模式",static:"📍 静止"}[m]||m;
+}
+
+// 手动切换
+document.querySelectorAll(".mode-btn").forEach(b=>{
+  b.onclick=async()=>{
+    const m=b.dataset.m;
+    toast("切换到 "+m+"...");
+    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh apply "+m);
+    toast("已切换: "+m);
+    setTimeout(refresh,800);
+  };
+});
+
+// 启停引擎
+async function toggleEngine(){
+  const running=document.getElementById("runDot").className.indexOf("off")<0;
+  if(running){
+    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh stop");
+    toast("引擎已停止");
+  }else{
+    await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh start");
+    toast("引擎已启动");
+  }
+  setTimeout(refresh,1000);
+}
+
+// 测速
+async function runSpeedtest(){
+  toast("测速中,请稍候...");
+  const out=await execSh("sh /data/adb/modules/network_enhance_auto/scripts/auto_engine.sh speedtest");
+  toast("测速完成");
+  document.getElementById("log").textContent=out||"(无输出)";
+}
+
+// 加载日志
+async function loadLog(){
+  const out=await execSh("tail -30 /data/local/tmp/ne_auto/events.log 2>/dev/null");
+  document.getElementById("log").textContent=out||"(暂无事件)";
+}
+
+// 初始化
+refresh();
+loadLog();
+setInterval(refresh,5000);  // 5 秒自动刷新
+setInterval(loadLog,15000);
+</script>
+</body>
+</html>
